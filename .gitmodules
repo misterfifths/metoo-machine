@@ -1,0 +1,4 @@
+[submodule "esp32/components/oauth/liboauth"]
+	path = esp32/components/oauth/liboauth
+	url = https://github.com/x42/liboauth.git
+	branch = master
