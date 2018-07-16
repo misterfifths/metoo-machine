@@ -22,7 +22,7 @@ const int CONNECTED_BIT = BIT0;
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
-    switch (event->event_id) {
+    switch(event->event_id) {
         case SYSTEM_EVENT_STA_START:
         	ESP_LOGI(TAG, "Connecting to wifi...");
         	ESP_ERROR_CHECK(esp_wifi_connect());
