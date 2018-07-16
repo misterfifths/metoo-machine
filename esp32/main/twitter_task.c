@@ -17,7 +17,7 @@
 #include "secrets.h"
 
 
-const uint32_t twitter_task_stack_size = 4096;
+const uint32_t twitter_task_stack_size = 4 * 1024;
 
 static const char *TAG = "TWT";
 
@@ -149,6 +149,8 @@ static void connect_to_twitter(void)
 	size_t postargs_length = strlen(postargs);
 	esp_http_client_set_post_field(http_client, postargs, postargs_length);
 
+
+	ESP_LOGI(TAG, "Opening HTTP connection...");
 
 	esp_err_t err;
 

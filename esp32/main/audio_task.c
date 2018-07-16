@@ -15,7 +15,7 @@
 
 #define BLINK_GPIO CONFIG_BLINK_GPIO
 
-const uint32_t audio_task_stack_size = configMINIMAL_STACK_SIZE;
+const uint32_t audio_task_stack_size = 2 * 1024;
 
 static const char *TAG = "AUDIO";
 

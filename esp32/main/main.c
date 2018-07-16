@@ -35,7 +35,6 @@ static void init_networking(void)
 	app_sntp_wait_for_time_update(10);
 }
 
-
 void app_main()
 {
 	ESP_LOGI(TAG, "Hello, world!");
