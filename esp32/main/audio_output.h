@@ -9,6 +9,9 @@
 
 
 void audio_init(void);
+
+// If sync is true, this call doesn't return (it sleeps via vTaskDelay) until the
+// sound is finished playing.
 void play_sound(const unsigned char *samples, size_t samples_length, bool sync);
 
 

@@ -12,6 +12,7 @@
 extern const uint32_t audio_task_stack_size;
 void audio_task_main(void *task_params);
 
+
 typedef enum {
 	audio_task_sound_success1,
 	audio_task_sound_success2,

@@ -24,6 +24,7 @@ static bool time_is_set(void)
 	return timeinfo.tm_year > (2016 - 1900);
 }
 
+
 static void log_time(void)
 {
 	time_t now;
@@ -37,6 +38,7 @@ static void log_time(void)
 	ESP_LOGI(TAG, "Current time: %s", strftime_buf);
 }
 
+
 void app_sntp_initialize(void)
 {
     ESP_LOGI(TAG, "Initializing SNTP");
@@ -44,6 +46,7 @@ void app_sntp_initialize(void)
     sntp_setservername(0, "pool.ntp.org");
     sntp_init();
 }
+
 
 bool app_sntp_wait_for_time_update(uint8_t max_retries)
 {

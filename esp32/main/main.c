@@ -16,13 +16,6 @@
 static const char *TAG = "APP";
 
 
-static void early_init(void)
-{
-	// The ESP HTTP client log level is debug by default, and it is *chatty*
-	esp_log_level_set("HTTP_CLIENT", ESP_LOG_INFO);
-}
-
-
 static void init_networking(void)
 {
 	app_wifi_initialize();
@@ -34,11 +27,10 @@ static void init_networking(void)
 	app_sntp_wait_for_time_update(10);
 }
 
+
 void app_main()
 {
 	ESP_LOGI(TAG, "Hello, world!");
-
-	early_init();
 
 	xTaskCreate(&audio_task_main, "audio_task", audio_task_stack_size, NULL, 4, NULL);
 

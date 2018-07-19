@@ -27,6 +27,7 @@ static void handle_tweet(cJSON *json)
 	audio_task_enqueue_sound(audio_task_sound_tweet);
 }
 
+
 static void read_loop(esp_http_client_handle_t http_client)
 {
 	const size_t resp_buffer_length = 20 * 1024;
@@ -201,6 +202,9 @@ cleanup:
 
 void twitter_task_main(void *task_params)
 {
+	// The ESP HTTP client log level is debug by default, and it is *chatty*
+	esp_log_level_set("HTTP_CLIENT", ESP_LOG_INFO);
+
 	connect_to_twitter();
 	// TODO: reconnect on error
 

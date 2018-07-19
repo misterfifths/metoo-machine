@@ -13,6 +13,12 @@
 static const char *TAG = "AUDIO_OUT";
 
 #define CONFIG_I2S_NUM I2S_NUM_0
+
+
+// Note that these values (sample rate, bits/sample, and mono/stereo) must match the incoming
+// sample buffers to play_sound (and thus the settings in the make_audio_header script) exactly;
+// no conversion is attempted.
+
 #define CONFIG_I2S_SAMPLE_RATE 16000
 
 // Bits/sample must be either 16 or 32... using I2S_BITS_PER_SAMPLE_8BIT always gave me an error.
@@ -43,7 +49,6 @@ void audio_init()
 		.intr_alloc_flags = 0,
 		.dma_buf_count = 2, // 2 is the minimum
 		.dma_buf_len = 64,  // seems this needs to be significantly smaller than the audio sample you're playing, or things get stuttery
-
     };
 
 
@@ -55,9 +60,8 @@ void audio_init()
 
     // Why do you need to specify sample rate and bits/sample in i2s_driver_install and also with this?
     ESP_ERROR_CHECK(i2s_set_clk(CONFIG_I2S_NUM, CONFIG_I2S_SAMPLE_RATE, CONFIG_I2S_BITS_PER_SAMPLE, CONFIG_I2S_CHANNEL_COUNT));
-
-    //i2s_stop(CONFIG_I2S_NUM);
 }
+
 
 void play_sound(const unsigned char *samples, size_t samples_length, bool sync)
 {
@@ -65,16 +69,12 @@ void play_sound(const unsigned char *samples, size_t samples_length, bool sync)
 	const uint32_t sound_length_ms = ((double)samples_length / CONFIG_I2S_SAMPLE_RATE / mono_divisor) * 1000;
 	ESP_LOGD(TAG, "Playing %zu samples, for a length of %u ms", samples_length, sound_length_ms);
 
-	//i2s_start(CONFIG_I2S_NUM);
-
 	size_t bytes_written;
 	ESP_ERROR_CHECK(i2s_write(CONFIG_I2S_NUM, samples, samples_length, &bytes_written, portMAX_DELAY));
 //	ESP_LOGD(TAG, "Wrote %zu bytes of audio (%zu total)", bytes_written, samples_length);
 
 	if(sync) {
-		vTaskDelay(sound_length_ms / portTICK_PERIOD_MS );
-		//i2s_stop(CONFIG_I2S_NUM);
-		//i2s_zero_dma_buffer(CONFIG_I2S_NUM);
+		vTaskDelay(sound_length_ms / portTICK_PERIOD_MS);
 		ESP_LOGD(TAG, "Audio done");
 	}
 }

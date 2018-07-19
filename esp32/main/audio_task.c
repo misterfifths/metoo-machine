@@ -69,6 +69,7 @@ void audio_task_main(void *task_params)
 	}
 }
 
+
 bool audio_task_enqueue_sound(audio_task_sound sound)
 {
 	if(sound_queue) {
@@ -78,6 +79,7 @@ bool audio_task_enqueue_sound(audio_task_sound sound)
 	ESP_LOGW(TAG, "audio_task_enqueue_sound called before the queue was initialized");
 	return false;
 }
+
 
 void audio_task_empty_queue(void)
 {
