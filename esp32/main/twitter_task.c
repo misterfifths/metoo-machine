@@ -13,7 +13,7 @@
 #include "oauth.h"
 
 #include "twitter_task.h"
-#include "task_common.h"
+#include "audio_task.h"
 #include "secrets.h"
 
 
@@ -24,9 +24,8 @@ static const char *TAG = "TWT";
 
 static void handle_tweet(cJSON *json)
 {
-	xSemaphoreGive(tweet_semaphore);
+	audio_task_enqueue_sound(audio_task_sound_tweet);
 }
-
 
 static void read_loop(esp_http_client_handle_t http_client)
 {
@@ -180,10 +179,12 @@ static void connect_to_twitter(void)
 
 	int status_code = esp_http_client_get_status_code(http_client);
 	if(status_code >= 400) {
+		audio_task_enqueue_sound(audio_task_sound_error);
 		ESP_LOGE(TAG, "HTTP response status code %d", status_code);
 		goto cleanup;
 	}
 
+	audio_task_enqueue_sound(audio_task_sound_success3);
 	ESP_LOGI(TAG, "HTTP response status code %d. Entering read loop", status_code);
 
 
