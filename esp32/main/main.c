@@ -11,6 +11,7 @@
 
 #include "twitter_task.h"
 #include "audio_task.h"
+#include "battery_task.h"
 
 
 static const char *TAG = "APP";
@@ -35,6 +36,10 @@ void app_main()
 	xTaskCreate(&audio_task_main, "audio_task", audio_task_stack_size, NULL, 4, NULL);
 
 	init_networking();
+
+	// You're supposed to wait until wifi starts before attempting to read from ADC1, which
+	// is what the battery voltage is on.
+	xTaskCreate(&battery_task_main, "battery_task", battery_task_stack_size, NULL, 3, NULL);
 
 	xTaskCreate(&twitter_task_main, "twitter_task", twitter_task_stack_size, NULL, 5, NULL);
 }

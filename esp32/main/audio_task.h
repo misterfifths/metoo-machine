@@ -19,6 +19,7 @@ typedef enum {
 	audio_task_sound_success3,
 	audio_task_sound_error,
 	audio_task_sound_tweet,
+	audio_task_sound_low_battery
 } audio_task_sound;
 
 // Returns true if the sound was enqueued for playback.
