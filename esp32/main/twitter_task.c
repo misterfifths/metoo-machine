@@ -15,6 +15,7 @@
 #include "twitter_task.h"
 #include "audio_task.h"
 #include "secrets.h"
+#include "rolling_buffer.h"
 
 
 const uint32_t twitter_task_stack_size = 4 * 1024;
@@ -30,6 +31,10 @@ typedef enum {
 } twitter_error;
 
 
+const uint32_t json_buffer_length = 20 * 1024;
+static rbuf *json_buffer;
+
+
 static void handle_tweet(cJSON *json)
 {
 	audio_task_enqueue_sound(audio_task_sound_tweet);
@@ -38,37 +43,42 @@ static void handle_tweet(cJSON *json)
 
 static twitter_error read_loop(esp_http_client_handle_t http_client)
 {
-	const size_t resp_buffer_length = 20 * 1024;
-	char *resp_buffer = calloc(resp_buffer_length, sizeof(char));
-
-	ptrdiff_t next_read_offset = 0;
-	size_t next_read_length = resp_buffer_length - 1;  // leave a null at the end of the buffer so cJSON doesn't go past it when parsing
+	rbuf_reset(json_buffer);
 
 	while(1) {
-		ESP_LOGD(TAG, "Reading %zu bytes of the response into position %zd in the buffer (%zu + %zu = %zu)", next_read_length, next_read_offset, next_read_offset, next_read_length, next_read_length + next_read_offset);
+		char *next_read_location;
+		size_t next_read_length;
+		rbuf_get_write_info(json_buffer, &next_read_location, &next_read_length);
+		ESP_LOGD(TAG, "Reading %zu bytes of the response", next_read_length);
 
-		int bytes_read = esp_http_client_read(http_client, &resp_buffer[next_read_offset], next_read_length);
+		// TODO: esp_http_client_read blocks until it reads the number of bytes we request.
+		// This means we can stall until we get enough tweets to fill the buffer.
+		// The alternative is to request a smaller number of bytes and handle the case of not
+		// having a valid JSON document. The docs are unclear on this, but the Tweepy
+		// source (https://github.com/tweepy/tweepy/blob/master/tweepy/streaming.py) implies
+		// that messages are separated by newlines. So the thing to do would be read a small
+		// number of bytes (1024?), and if we got a newline, try to parse it as JSON. If we
+		// didn't get a newline, read more. If the buffer is full and we haven't seen a newline,
+		// then the incoming tweet data is too big for our buffer and we're screwed.
+
+		int bytes_read = esp_http_client_read(http_client, next_read_location, next_read_length);
 		if(bytes_read == -1) {
 			ESP_LOGE(TAG, "Error reading response body");
 			goto cleanup;
 		}
 
-		size_t valid_bytes_in_buffer = next_read_offset + bytes_read;
-		ESP_LOGD(TAG, "Read %d bytes; there are %zu valid bytes in the buffer", bytes_read, valid_bytes_in_buffer);
+		rbuf_add_bytes(json_buffer, bytes_read);
 
-		// It seems wise to do something like this to safeguard things in case we don't fill the buffer
-		if(valid_bytes_in_buffer < resp_buffer_length) {
-			resp_buffer[valid_bytes_in_buffer] = '\0';
-		}
+		ESP_LOGD(TAG, "Read %d bytes; there are %zu valid bytes in the buffer", bytes_read, rbuf_get_valid_byte_count(json_buffer));
 
 
 		const char *end_of_json_document = NULL;
-		cJSON *json = cJSON_ParseWithOpts(resp_buffer, &end_of_json_document, 0);
+		cJSON *json = cJSON_ParseWithOpts(rbuf_get_bytes(json_buffer), &end_of_json_document, 0);
 		if(json == NULL) {
 			// TODO: this might happen if we are unable to fit an entire tweet within the buffer
 			// Hoping to mitigate that by just making the buffer sufficiently large.... risky business
-			size_t error_offset = cJSON_GetErrorPtr() - resp_buffer;
-			ESP_LOGE(TAG, "Unable to parse response as JSON (starting at character %zu): %s", error_offset, resp_buffer);
+			size_t error_offset = cJSON_GetErrorPtr() - rbuf_get_bytes(json_buffer);
+			ESP_LOGE(TAG, "Unable to parse response as JSON (starting at character %zu): %s", error_offset, rbuf_get_bytes(json_buffer));
 			goto cleanup;
 		}
 
@@ -88,27 +98,11 @@ static twitter_error read_loop(esp_http_client_handle_t http_client)
 
 		cJSON_Delete(json);
 
-
-		size_t length_of_json_document = end_of_json_document - resp_buffer;
-		size_t length_of_next_json_fragment = valid_bytes_in_buffer - length_of_json_document;
-
-		if(length_of_next_json_fragment > 0) {
-			// shuffle the unread data to the front of the buffer
-			memmove(resp_buffer, end_of_json_document + 1, length_of_next_json_fragment);
-
-			next_read_offset = length_of_next_json_fragment - 1;  // this is an offset, so we need the - 1 to account for it begin 0-based
-		}
-		else {
-			next_read_offset = 0;
-		}
-
-		next_read_length = resp_buffer_length - length_of_next_json_fragment;
-		ESP_LOGD(TAG, "We read %d bytes. The JSON document was %zu bytes. That leaves %zu left in the buffer.", bytes_read, length_of_json_document, length_of_next_json_fragment);
+		rbuf_discard_bytes_ending_at(json_buffer, end_of_json_document);
+		ESP_LOGD(TAG, "There are now %zu bytes left in the buffer", rbuf_get_valid_byte_count(json_buffer));
 	}
 
 cleanup:
-	free(resp_buffer);
-
 	// Making the safe-seeming assumption that trouble at this point is a networking error of some sort
 	return twitter_error_networking;
 }
@@ -224,6 +218,8 @@ void twitter_task_main(void *task_params)
 {
 	// The ESP HTTP client log level is debug by default, and it is *chatty*
 	esp_log_level_set("HTTP_CLIENT", ESP_LOG_INFO);
+
+	json_buffer = rbuf_alloc(json_buffer_length);
 
 
 	while(1) {
