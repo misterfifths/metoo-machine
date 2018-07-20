@@ -31,6 +31,7 @@ typedef enum {
 } twitter_error;
 
 
+const uint32_t http_response_read_chunk_size = 1024;
 const uint32_t json_buffer_length = 20 * 1024;
 static rbuf *json_buffer;
 
@@ -41,25 +42,63 @@ static void handle_tweet(cJSON *json)
 }
 
 
+static bool parse_and_discard_tweet(void)
+{
+	const char *end_of_json_document = NULL;
+	cJSON *json = cJSON_ParseWithOpts(rbuf_get_bytes(json_buffer), &end_of_json_document, 0);
+	if(json == NULL) {
+		size_t error_offset = end_of_json_document - rbuf_get_bytes(json_buffer);
+		ESP_LOGW(TAG, "Unable to parse buffer as JSON (error at character %zu): %s", error_offset, rbuf_get_bytes(json_buffer));
+		return false;
+	}
+
+	ESP_LOGI(TAG, "Read a JSON document of length %zu", end_of_json_document - rbuf_get_bytes(json_buffer));
+
+
+	// We get a variety of messages through this channel (disconnects, rate limits, user updates, etc.).
+	// Tweets seem to be the only one with a "text" property, so I'm using that as the discriminator.
+	// TODO: make note of disconnect messages, stall notifications, and limit messages?
+	if(cJSON_HasObjectItem(json, "text")) {
+		ESP_LOGI(TAG, "a tweet!");
+		handle_tweet(json);
+	}
+	else {
+		char *jsonString = cJSON_Print(json);
+		ESP_LOGI(TAG, "Something other than a tweet!\n%s", jsonString);
+		free(jsonString);
+	}
+
+	cJSON_Delete(json);
+
+	rbuf_discard_bytes_ending_at(json_buffer, end_of_json_document);
+
+	return true;
+}
+
+
 static twitter_error read_loop(esp_http_client_handle_t http_client)
 {
 	rbuf_reset(json_buffer);
 
 	while(1) {
-		char *next_read_location;
-		size_t next_read_length;
-		rbuf_get_write_info(json_buffer, &next_read_location, &next_read_length);
-		ESP_LOGD(TAG, "Reading %zu bytes of the response", next_read_length);
+		// esp_http_client_read blocks until it reads the number of bytes we request.
+		// This means we will stall until we get enough tweets to fill the buffer.
+		// So, instead of trying to fill the whole buffer at once, we request a smaller number
+		// of bytes and handle the case of not having a complete JSON document.
+		// The docs are unclear on this, but the Tweepy source implies that messages are separated by newlines
+		// (see https://github.com/tweepy/tweepy/blob/master/tweepy/streaming.py).
+		// So we read a small number of bytes (1024-ish), and if we got a newline, try to parse it
+		// as JSON. If we didn't get a newline (or it's not yet valid JSON), read more.
+		// If the buffer is full and we haven't seen valid JSON, then the incoming tweet data is too
+		// big for our buffer and we're screwed.
 
-		// TODO: esp_http_client_read blocks until it reads the number of bytes we request.
-		// This means we can stall until we get enough tweets to fill the buffer.
-		// The alternative is to request a smaller number of bytes and handle the case of not
-		// having a valid JSON document. The docs are unclear on this, but the Tweepy
-		// source (https://github.com/tweepy/tweepy/blob/master/tweepy/streaming.py) implies
-		// that messages are separated by newlines. So the thing to do would be read a small
-		// number of bytes (1024?), and if we got a newline, try to parse it as JSON. If we
-		// didn't get a newline, read more. If the buffer is full and we haven't seen a newline,
-		// then the incoming tweet data is too big for our buffer and we're screwed.
+		char *next_read_location;
+		size_t max_read_length;
+		rbuf_get_write_info(json_buffer, &next_read_location, &max_read_length);
+
+		// Ask for MIN(max_read_length, http_response_read_chunk_size) bytes
+		size_t next_read_length = http_response_read_chunk_size;
+		if(next_read_length > max_read_length) next_read_length = max_read_length;
 
 		int bytes_read = esp_http_client_read(http_client, next_read_location, next_read_length);
 		if(bytes_read == -1) {
@@ -72,38 +111,31 @@ static twitter_error read_loop(esp_http_client_handle_t http_client)
 		ESP_LOGD(TAG, "Read %d bytes; there are %zu valid bytes in the buffer", bytes_read, rbuf_get_valid_byte_count(json_buffer));
 
 
-		const char *end_of_json_document = NULL;
-		cJSON *json = cJSON_ParseWithOpts(rbuf_get_bytes(json_buffer), &end_of_json_document, 0);
-		if(json == NULL) {
-			// TODO: this might happen if we are unable to fit an entire tweet within the buffer
-			// Hoping to mitigate that by just making the buffer sufficiently large.... risky business
-			size_t error_offset = cJSON_GetErrorPtr() - rbuf_get_bytes(json_buffer);
-			ESP_LOGE(TAG, "Unable to parse response as JSON (starting at character %zu): %s", error_offset, rbuf_get_bytes(json_buffer));
+		// Did we see a newline in the newly read data?
+		char *newline = strchr(next_read_location, '\n');
+
+		if(newline) {
+			// Try to parse a tweet.
+			// There's the chance that even with the newline, we don't have a valid JSON document
+			// (the API sends newlines as keep-alives). So if this fails, read some more and keep trying.
+			if(parse_and_discard_tweet()) {
+				continue;
+			}
+		}
+
+		// If we're here, either we didn't see a newline, or we did but we don't have valid JSON yet.
+		// If we have more room in the buffer, loop around and read more.
+		// If we don't, we're screwed.
+
+		size_t remaining_buffer_bytes = max_read_length - bytes_read;
+		if(remaining_buffer_bytes == 0) {
+			ESP_LOGE(TAG, "The buffer is full and is still not valid JSON! Bailing.");
 			goto cleanup;
 		}
-
-
-		// We get a variety of messages through this channel (disconnects, rate limits, user updates, etc.).
-		// Tweets seem to be the only one with a "text" property, so I'm using that as the discriminator.
-		// TODO: make note of disconnect messages, stall notifications, and limit messages?
-		if(cJSON_HasObjectItem(json, "text")) {
-			ESP_LOGI(TAG, "a tweet!");
-			handle_tweet(json);
-		}
-		else {
-			char *jsonString = cJSON_Print(json);
-			ESP_LOGI(TAG, "Something other than a tweet!\n%s", jsonString);
-			free(jsonString);
-		}
-
-		cJSON_Delete(json);
-
-		rbuf_discard_bytes_ending_at(json_buffer, end_of_json_document);
-		ESP_LOGD(TAG, "There are now %zu bytes left in the buffer", rbuf_get_valid_byte_count(json_buffer));
 	}
 
 cleanup:
-	// Making the safe-seeming assumption that trouble at this point is a networking error of some sort
+	// Making the safe-ish assumption that trouble at this point is a networking error of some sort
 	return twitter_error_networking;
 }
 
@@ -218,6 +250,9 @@ void twitter_task_main(void *task_params)
 {
 	// The ESP HTTP client log level is debug by default, and it is *chatty*
 	esp_log_level_set("HTTP_CLIENT", ESP_LOG_INFO);
+
+	esp_log_level_set(TAG, ESP_LOG_INFO);
+
 
 	json_buffer = rbuf_alloc(json_buffer_length);
 
