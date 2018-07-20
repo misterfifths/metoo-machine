@@ -39,6 +39,8 @@ void audio_init()
 	// the i2s module is chatty about DMA buffers
 	esp_log_level_set("I2S", ESP_LOG_INFO);
 
+	esp_log_level_set(TAG, ESP_LOG_INFO);
+
 
     i2s_config_t i2s_config = {
 		.mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
