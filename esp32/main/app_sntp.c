@@ -11,7 +11,7 @@
 
 
 static const char *TAG = "SNTP";
-static const uint16_t SNTPRetryIntervalMS = 200;  // millis to wait between SNTP retries
+static const uint16_t check_interval_ms = 200;  // millis to wait between SNTP retries
 
 
 static bool time_is_set(void)
@@ -56,7 +56,7 @@ bool app_sntp_wait_for_time_update(uint8_t max_retries)
 		--remaining_tries;
 
 		ESP_LOGI(TAG, "Waiting for system time to be set (%u tries remaining)...", remaining_tries);
-		vTaskDelay(SNTPRetryIntervalMS / portTICK_PERIOD_MS);
+		vTaskDelay(check_interval_ms / portTICK_PERIOD_MS);
 	}
 
 	if(time_is_set()) {
