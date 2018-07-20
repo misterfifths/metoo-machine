@@ -63,6 +63,7 @@ void audio_task_main(void *task_params)
 			case audio_task_sound_low_battery:
 				sound_samples = sound_low_battery_samples;
 				sound_samples_len = sound_low_battery_samples_len;
+				break;
 
 			default:
 				ESP_LOGW(TAG, "Unknown sound ID %d; ignoring", sound_to_play);
