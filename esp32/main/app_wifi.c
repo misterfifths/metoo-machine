@@ -13,7 +13,7 @@
 static const char *TAG = "WIFI";
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
-static EventGroupHandle_t wifi_event_group;
+static EventGroupHandle_t wifi_event_group = NULL;
 
 /* The event group allows multiple bits for each event,
    but we only care about one event - are we connected
@@ -78,8 +78,9 @@ void app_wifi_stop()
 	// Uninstall the event handler so it doesn't try to reconnect
 	esp_event_loop_set_cb(NULL, NULL);
 
-	vEventGroupDelete(wifi_event_group);
-
-	esp_wifi_disconnect();
-	esp_wifi_stop();
+	if(wifi_event_group) {
+		vEventGroupDelete(wifi_event_group);
+		esp_wifi_disconnect();
+		esp_wifi_stop();
+	}
 }
