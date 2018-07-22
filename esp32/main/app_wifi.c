@@ -72,3 +72,14 @@ void app_wifi_wait_connected()
 {
     xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
 }
+
+void app_wifi_stop()
+{
+	// Uninstall the event handler so it doesn't try to reconnect
+	esp_event_loop_set_cb(NULL, NULL);
+
+	vEventGroupDelete(wifi_event_group);
+
+	esp_wifi_disconnect();
+	esp_wifi_stop();
+}

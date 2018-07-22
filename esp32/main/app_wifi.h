@@ -8,6 +8,7 @@
 
 void app_wifi_initialize(void);
 void app_wifi_wait_connected(void);
+void app_wifi_stop(void);
 
 
 #endif
