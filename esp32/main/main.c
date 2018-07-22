@@ -5,6 +5,7 @@
 #include "freertos/task.h"
 
 #include "esp_log.h"
+#include "esp_sleep.h"
 
 #include "app_wifi.h"
 #include "app_sntp.h"
@@ -12,6 +13,7 @@
 #include "twitter_task.h"
 #include "audio_task.h"
 #include "battery_task.h"
+#include "sleep_task.h"
 
 
 static const char *TAG = "APP";
@@ -32,8 +34,13 @@ static void init_networking(void)
 void app_main()
 {
 	ESP_LOGI(TAG, "Hello, world!");
+	if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED) {
+		ESP_LOGI(TAG, "This is a wake from deep sleep.");
+	}
 
 	xTaskCreate(audio_task_main, "audio_task", audio_task_stack_size, NULL, 4, NULL);
+
+	xTaskCreate(sleep_task_main, "sleep_task", sleep_task_stack_size, NULL, 3, NULL);
 
 	init_networking();
 
