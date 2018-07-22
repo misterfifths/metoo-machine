@@ -49,6 +49,6 @@ void battery_task_main(void *task_params)
         	audio_task_enqueue_sound(audio_task_sound_low_battery);
         }
 
-        vTaskDelay(30 * 1000 / portTICK_RATE_MS);
+        vTaskDelay(60 * 1000 / portTICK_RATE_MS);
     }
 }
