@@ -19,8 +19,8 @@ const uint32_t sleep_task_stack_size = 2 * 1024;
 
 static const char *TAG = "SLEEP";
 
-// Must be an RTC-capable GPIO: 0, 2, 4, 12-15, 25-27, 32-39
-// Additionally, only some of these pins have internal pullup/down...
+// Must be an RTC-capable GPIO: 0, 2, 4, 12-15, 25-27, 32-39.
+// Additionally, GPIO 34-39 do not have internal pullup/pulldown.
 static const gpio_num_t sleep_wake_pin = GPIO_NUM_4;
 static const int sleep_wake_level = 0;  // 0 = low, 1 = high
 
@@ -54,7 +54,7 @@ void sleep_task_main(void *task_params)
 
 	gpio_config_t pin_config = {
 		.mode = GPIO_MODE_INPUT,
-		.intr_type = GPIO_PIN_INTR_POSEDGE,
+		.intr_type = GPIO_PIN_INTR_NEGEDGE,
 		.pin_bit_mask = 1ULL << sleep_wake_pin,
 		.pull_down_en = GPIO_PULLDOWN_DISABLE,
 		.pull_up_en = GPIO_PULLUP_ENABLE
