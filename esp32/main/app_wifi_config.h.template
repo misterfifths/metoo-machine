@@ -1,0 +1,52 @@
+// 2018 / Tim Clem / github.com/misterfifths
+// Public domain.
+
+
+// Define things as necessary below and rename this file to app_wifi_config.h.
+
+
+#ifndef _APP_WIFI_CONFIG_H
+#define _APP_WIFI_CONFIG_H
+
+
+// The name of the network to join
+#define CONFIG_WIFI_SSID "my-network"
+
+
+#define _CONFIG_WIFI_AUTH_MODE_WPA 1
+#define _CONFIG_WIFI_AUTH_MODE_WPA2_EAP 2
+
+// Define to either _CONFIG_WIFI_AUTH_MODE_WPA (standard pre-shared key) or
+// _CONFIG_WIFI_AUTH_MODE_WPA2_EAP (enterprise username + password)
+#define CONFIG_WIFI_AUTH_MODE _CONFIG_WIFI_AUTH_MODE_WPA
+
+
+#if CONFIG_WIFI_AUTH_MODE == _CONFIG_WIFI_AUTH_MODE_WPA
+
+	// Basic WPA configuration
+	#define CONFIG_WIFI_PASSWORD "my-network-password"
+
+#elif CONFIG_WIFI_AUTH_MODE == _CONFIG_WIFI_AUTH_MODE_WPA2_EAP
+
+	// WPA enterprise (PEAP/MSCHAPv2; no cert stuff)
+
+	// Identity and username are technically optional. Define to "" to skip them.
+	#define CONFIG_WIFI_EAP_IDENTITY "bobr159"
+	#define CONFIG_WIFI_USERNAME ""
+	#define CONFIG_WIFI_PASSWORD "plaintext-password"
+
+	// Define to 1 if CONFIG_WIFI_PASSWORD is the MD4 password hash of the actual password.
+	// Note that this will only work for MSCHAPv2.
+	// Define to 0 if it's plaintext.
+	// You can generate a hash like so:
+	// $ echo -n 'your-password-here' | iconv -t UTF16-LE | openssl md4
+	#define CONFIG_WIFI_PASSWORD_IS_HASH 0
+
+#else
+
+	#error Unsupported CONFIG_WIFI_AUTH_MODE
+
+#endif
+
+
+#endif

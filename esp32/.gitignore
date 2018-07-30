@@ -1,3 +1,4 @@
 main/secrets.c
+main/app_wifi_config.h
 build/
 sdkconfig.old

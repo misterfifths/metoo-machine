@@ -79,8 +79,6 @@ CONFIG_MONITOR_BAUD=115200
 #
 # App Configuration
 #
-CONFIG_WIFI_SSID="wie-fie-2.4ghz"
-CONFIG_WIFI_PASSWORD="bananadog"
 
 #
 # Partition Table
