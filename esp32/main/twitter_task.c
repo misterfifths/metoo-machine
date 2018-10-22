@@ -31,9 +31,35 @@ typedef enum {
 } twitter_error;
 
 
+// How many bytes to read from the HTTP response at a time. Reads are blocking,
+// so you want to strike a balance between it being too large (and thus potentially
+// taking a long time to fill) and it being too small (and thus incurring a lot of
+// overhead).
 const uint32_t http_response_read_chunk_size = 1024;
+
+// This needs to be big enough to handle single tweets.
+// If one doesn't fit, the program will have to bail and reconnect to Twitter.
+// Going intuition is that the average tweet is roughly 4k, and the biggest are 15-ish.
 const uint32_t json_buffer_length = 20 * 1024;
+
 static rbuf *json_buffer;
+
+
+/*
+ * Flow here is like so:
+ * 1. twitter_task_main calls connect_to_twitter
+ * 	 1a. If connect_to_twitter ever returns (barring an error, it's an infinite loop), a
+ * 	     reconnect is attempted after an appropriate backoff.
+ * 2. connect_to_twitter sets up and makes the API request
+ * 	 2a. If all goes well, it calls read_loop.
+ * 	 2b. If anything fails, it returns an error code.
+ * 3. read_loop collects response data into a buffer and tries to parse it as JSON
+ * 	 3a. If it's a tweet (see parse_and_discard_tweet), it calls handle_tweet with the JSON.
+ * 	 3b. If it's not (other flow messages), it logs and discards it.
+ * 	 3c. If anything goes wrong (the buffer fills without being valid JSON, or a network error),
+ * 	     it returns an error. This triggers 2b.
+ * 4. handle_tweet just enqueues a sound.
+ */
 
 
 static void handle_tweet(cJSON *json)

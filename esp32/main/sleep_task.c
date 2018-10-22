@@ -39,6 +39,7 @@ static void enter_deep_sleep(void)
 
 static void gpio_isr_handler(void *arg)
 {
+	// TODO: make this only trigger after a certain amount of time/triggers
 	xSemaphoreGiveFromISR(sleep_event_semaphore, NULL);
 }
 

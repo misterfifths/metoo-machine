@@ -6,8 +6,6 @@
 
 
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
 
 
 // A buffer of fixed size that is filled by appending bytes, and intermittently
@@ -18,6 +16,8 @@
 // and length for a write, and then moving bytes to that location via some external means
 // (memcpy or whatever). Once that's complete, call rbuf_add_bytes to update the structure
 // with the number of bytes you added.
+
+// If there are any bounds issues, calls will assert.
 
 typedef struct rbuf rbuf;
 

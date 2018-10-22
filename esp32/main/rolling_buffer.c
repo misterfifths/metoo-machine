@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
+#include <ctype.h>  // for isprint()
 
 #include "rolling_buffer.h"
 
@@ -87,6 +87,7 @@ void rbuf_discard_bytes(rbuf *buffer, size_t byte_count)
 
 	size_t remaining_byte_count = buffer->next_write_index - byte_count;
 	if(remaining_byte_count > 0) {
+		// memmove, not memcpy; the ranges will overlap if it's more than half the buffer
 		memmove(buffer->bytes, buffer->bytes + byte_count, remaining_byte_count);
 	}
 
