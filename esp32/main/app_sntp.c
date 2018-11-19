@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include "esp_log.h"
 #include "esp_system.h"
-#include "apps/sntp/sntp.h"
+#include "lwip/apps/sntp.h"
 #include "app_sntp.h"
 
 
