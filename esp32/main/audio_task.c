@@ -19,6 +19,8 @@ static const char *TAG = "AUDIO";
 #define CONFIG_AUDIO_TASK_QUEUE_LENGTH 64
 static QueueHandle_t sound_queue = NULL;
 
+static bool next_tweet_sound_is_tick = true;
+
 
 void audio_task_main(void *task_params)
 {
@@ -55,10 +57,20 @@ void audio_task_main(void *task_params)
 				sound_samples_len = sound_error_samples_len;
 				break;
 
-			case audio_task_sound_tweet:
-				sound_samples = sound_tweet_samples;
-				sound_samples_len = sound_tweet_samples_len;
+			case audio_task_sound_tweet: {
+				if(next_tweet_sound_is_tick) {
+					sound_samples = sound_tick_samples;
+					sound_samples_len = sound_tick_samples_len;
+				}
+				else {
+					sound_samples = sound_tock_samples;
+					sound_samples_len = sound_tock_samples_len;
+				}
+
+				next_tweet_sound_is_tick = !next_tweet_sound_is_tick;
+
 				break;
+			}
 
 			case audio_task_sound_low_battery:
 				sound_samples = sound_low_battery_samples;
