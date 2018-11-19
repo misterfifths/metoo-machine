@@ -40,7 +40,8 @@ const uint32_t http_response_read_chunk_size = 1024;
 // This needs to be big enough to handle single tweets.
 // If one doesn't fit, the program will have to bail and reconnect to Twitter.
 // Going intuition is that the average tweet is roughly 4k, and the biggest are 15-ish.
-const uint32_t json_buffer_length = 20 * 1024;
+// Buuutttt... 20 overflowed sometimes.
+const uint32_t json_buffer_length = 25 * 1024;
 
 static rbuf *json_buffer;
 
