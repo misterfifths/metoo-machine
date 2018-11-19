@@ -39,7 +39,7 @@
 	// Note that this will only work for MSCHAPv2.
 	// Define to 0 if it's plaintext.
 	// You can generate a hash like so:
-	// $ echo -n 'your-password-here' | iconv -t UTF16-LE | openssl md4
+	// $ echo -n 'your-password-here' | iconv -t UTF-16LE | openssl md4
 	#define CONFIG_WIFI_PASSWORD_IS_HASH 0
 
 #else
