@@ -87,6 +87,11 @@ static esp_err_t app_wifi_sta_wpa2_ent_set_password_hash(const char *password_ha
 
 void app_wifi_initialize(void)
 {
+	// phy_init & wpa are chatty
+	esp_log_level_set("phy_init", ESP_LOG_INFO);
+	esp_log_level_set("wpa", ESP_LOG_INFO);
+
+
 	ESP_ERROR_CHECK(nvs_flash_init());
     tcpip_adapter_init();
 
