@@ -14,6 +14,8 @@
 #include "sleep_task.h"
 #include "audio_task.h"
 
+#include "main.h"
+
 
 const uint32_t sleep_task_stack_size = 2 * 1024;
 
@@ -30,9 +32,17 @@ static xQueueHandle sleep_event_semaphore;
 __attribute__((noreturn))
 static void enter_deep_sleep(void)
 {
+	suspend_tasks_for_sleep();
 	app_wifi_stop();
 
 	esp_sleep_enable_ext0_wakeup(sleep_wake_pin, sleep_wake_level);
+
+	// We need RTC peripherals for the pin wakeup, but we can disable everything else.
+	// (The docs say this should happen automatically, but log messages indicate otherwise?)
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+	esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
+
 	esp_deep_sleep_start();
 }
 
@@ -75,6 +85,8 @@ void sleep_task_main(void *task_params)
     	audio_task_empty_queue();
     	audio_task_enqueue_sound(audio_task_sound_error);
     	vTaskDelay(600 / portTICK_PERIOD_MS);
+
+    	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     	enter_deep_sleep();
     }

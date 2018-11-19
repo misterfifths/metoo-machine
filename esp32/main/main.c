@@ -7,6 +7,8 @@
 #include "esp_log.h"
 #include "esp_sleep.h"
 
+#include "main.h"
+
 #include "app_wifi.h"
 #include "app_sntp.h"
 
@@ -17,6 +19,14 @@
 
 
 static const char *TAG = "APP";
+
+static TaskHandle_t twitter_task_handle;
+
+
+void suspend_tasks_for_sleep(void)
+{
+	vTaskSuspend(twitter_task_handle);
+}
 
 
 static void init_networking(void)
@@ -40,7 +50,7 @@ void app_main()
 
 	xTaskCreate(audio_task_main, "audio_task", audio_task_stack_size, NULL, 4, NULL);
 
-	xTaskCreate(sleep_task_main, "sleep_task", sleep_task_stack_size, NULL, 3, NULL);
+	xTaskCreate(sleep_task_main, "sleep_task", sleep_task_stack_size, NULL, 10, NULL);
 
 	init_networking();
 
@@ -48,5 +58,5 @@ void app_main()
 	// is what the battery voltage is on.
 	xTaskCreate(battery_task_main, "battery_task", battery_task_stack_size, NULL, 3, NULL);
 
-	xTaskCreate(twitter_task_main, "twitter_task", twitter_task_stack_size, NULL, 5, NULL);
+	xTaskCreate(twitter_task_main, "twitter_task", twitter_task_stack_size, NULL, 5, &twitter_task_handle);
 }
