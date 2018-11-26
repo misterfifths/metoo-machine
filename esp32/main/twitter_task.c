@@ -18,9 +18,17 @@
 #include "rolling_buffer.h"
 
 
-const uint32_t twitter_task_stack_size = 4 * 1024;
-
 static const char *TAG = "TWT";
+
+
+void twitter_task_main(void *task_params);
+const app_task_descriptor twitter_task_descriptor = {
+	.task_main = twitter_task_main,
+	.name = "twitter_task",
+	.stack_size = 4 * 1024,
+	.priority = 5
+};
+
 
 static uint32_t retry_delay_ms = 0;
 

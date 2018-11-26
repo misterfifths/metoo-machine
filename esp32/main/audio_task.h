@@ -5,12 +5,10 @@
 #define _AUDIO_TASK_H
 
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "app_task.h"
 
 
-extern const uint32_t audio_task_stack_size;
-void audio_task_main(void *task_params);
+extern const app_task_descriptor audio_task_descriptor;
 
 
 typedef enum {

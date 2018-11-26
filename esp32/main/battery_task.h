@@ -5,11 +5,10 @@
 #define _BATTERY_TASK_H
 
 
-#include <stdint.h>
+#include "app_task.h"
 
 
-extern const uint32_t battery_task_stack_size;
-void battery_task_main(void *task_params);
+extern const app_task_descriptor battery_task_descriptor;
 
 
 #endif

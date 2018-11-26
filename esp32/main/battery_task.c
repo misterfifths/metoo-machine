@@ -15,7 +15,15 @@
 
 static const char *TAG = "BATT";
 
-const uint32_t battery_task_stack_size = 2 * 1024;
+
+void battery_task_main(void *task_params);
+const app_task_descriptor battery_task_descriptor = {
+	.task_main = battery_task_main,
+	.name = "battery_task",
+	.stack_size = 2 * 1024,
+	.priority = 3
+};
+
 
 const uint32_t warning_voltage_threshold_mV = 3300;  // See note below
 

@@ -17,9 +17,17 @@
 #include "main.h"
 
 
-const uint32_t sleep_task_stack_size = 2 * 1024;
-
 static const char *TAG = "SLEEP";
+
+
+void sleep_task_main(void *task_params);
+const app_task_descriptor sleep_task_descriptor = {
+	.task_main = sleep_task_main,
+	.name = "sleep_task",
+	.stack_size = 2 * 1024,
+	.priority = 10
+};
+
 
 // Must be an RTC-capable GPIO: 0, 2, 4, 12-15, 25-27, 32-39.
 // Additionally, GPIO 34-39 do not have internal pullup/pulldown.

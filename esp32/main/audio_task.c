@@ -12,9 +12,17 @@
 #include "sound_data.h"
 
 
-const uint32_t audio_task_stack_size = 2 * 1024;
-
 static const char *TAG = "AUDIO";
+
+
+void audio_task_main(void *task_params);
+const app_task_descriptor audio_task_descriptor = {
+	.task_main = audio_task_main,
+	.name = "audio_task",
+	.stack_size = 2 * 1024,
+	.priority = 4
+};
+
 
 #define CONFIG_AUDIO_TASK_QUEUE_LENGTH 64
 static QueueHandle_t sound_queue = NULL;
