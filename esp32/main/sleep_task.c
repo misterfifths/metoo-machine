@@ -49,8 +49,17 @@ static void enter_deep_sleep(void)
 
 static void gpio_isr_handler(void *arg)
 {
-	// TODO: make this only trigger after a certain amount of time/triggers
-	xSemaphoreGiveFromISR(sleep_event_semaphore, NULL);
+	// TODO: make this only trigger after a certain amount of time/triggers?
+
+	BaseType_t xHigherPriorityTaskWoken;
+	xSemaphoreGiveFromISR(sleep_event_semaphore, &xHigherPriorityTaskWoken);
+
+	if(xHigherPriorityTaskWoken == pdTRUE) {
+		// Docs say that if xSemaphoreGiveFromISR sets this flag, then there was something
+		// waiting on the semaphore we signaled, and we should schedule a context switch
+		// with this macro (presumably so the task wakes immediately after the ISR returns?):
+		portYIELD_FROM_ISR();
+	}
 }
 
 
