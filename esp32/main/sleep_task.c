@@ -26,7 +26,7 @@ static const char *TAG = "SLEEP";
 static const gpio_num_t sleep_wake_pin = GPIO_NUM_4;
 static const int sleep_wake_level = 0;  // 0 = low, 1 = high
 
-static xQueueHandle sleep_event_semaphore;
+static TaskHandle_t sleep_task_handle = NULL;
 
 
 __attribute__((noreturn))
@@ -51,11 +51,11 @@ static void gpio_isr_handler(void *arg)
 {
 	// TODO: make this only trigger after a certain amount of time/triggers?
 
-	BaseType_t xHigherPriorityTaskWoken;
-	xSemaphoreGiveFromISR(sleep_event_semaphore, &xHigherPriorityTaskWoken);
+	BaseType_t higher_priority_task_woken = pdFALSE;
+	vTaskNotifyGiveFromISR(sleep_task_handle, &higher_priority_task_woken);
 
-	if(xHigherPriorityTaskWoken == pdTRUE) {
-		// Docs say that if xSemaphoreGiveFromISR sets this flag, then there was something
+	if(higher_priority_task_woken == pdTRUE) {
+		// Docs say that if vTaskNotifyGiveFromISR sets this flag, then there was something
 		// waiting on the semaphore we signaled, and we should schedule a context switch
 		// with this macro (presumably so the task wakes immediately after the ISR returns?):
 		portYIELD_FROM_ISR();
@@ -67,9 +67,10 @@ void sleep_task_main(void *task_params)
 {
 	// If we just woke from sleep, our GPIO pin is configured for the RTC subsystem,
 	// and we need to undo that.
+	// See https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/sleep_modes.html#external-wakeup-ext0
 	rtc_gpio_deinit(sleep_wake_pin);
 
-	sleep_event_semaphore = xSemaphoreCreateBinary();
+	sleep_task_handle = xTaskGetCurrentTaskHandle();
 
 
 	gpio_config_t pin_config = {
@@ -87,14 +88,21 @@ void sleep_task_main(void *task_params)
 
 
     while(1) {
-    	if(xSemaphoreTake(sleep_event_semaphore, portMAX_DELAY) != pdTRUE) continue;
+    	// If ulTaskNotifyTake returns something other than 1 (i.e., true), it means
+    	// the call timed out and we should wait again.
+    	if(ulTaskNotifyTake(pdTRUE, portMAX_DELAY) != 1) continue;
 
     	ESP_LOGI(TAG, "Going into deep sleep!");
 
     	audio_task_empty_queue();
     	audio_task_enqueue_sound(audio_task_sound_error);
+
+    	// Sleep for the sound to finish.
+    	// TODO: call the audio_output function directly here, rather than going through
+    	// the queue for audio_task?
     	vTaskDelay(600 / portTICK_PERIOD_MS);
 
+    	// Sleep to allow the person to move the magnet away and not immediately re-wake.
     	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     	enter_deep_sleep();
