@@ -27,7 +27,7 @@ static EventGroupHandle_t wifi_event_group = NULL;
 /* The event group allows multiple bits for each event,
    but we only care about one event - are we connected
    to the AP with an IP? */
-const int CONNECTED_BIT = BIT0;
+static const int CONNECTED_BIT = BIT0;
 
 // Used to customize initialization to support hashed passwords
 static wpa2_crypto_funcs_t *app_wifi_crypto_funcs = NULL;

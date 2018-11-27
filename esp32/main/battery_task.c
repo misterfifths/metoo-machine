@@ -25,7 +25,7 @@ const app_task_descriptor battery_task_descriptor = {
 };
 
 
-const uint32_t warning_voltage_threshold_mV = 3300;  // See note below
+static const uint32_t warning_voltage_threshold_mV = 3300;  // See note below
 
 
 void battery_task_main(void *task_params)

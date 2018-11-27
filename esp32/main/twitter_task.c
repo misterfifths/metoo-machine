@@ -43,13 +43,13 @@ typedef enum {
 // so you want to strike a balance between it being too large (and thus potentially
 // taking a long time to fill) and it being too small (and thus incurring a lot of
 // overhead).
-const uint32_t http_response_read_chunk_size = 1024;
+static const uint32_t http_response_read_chunk_size = 1024;
 
 // This needs to be big enough to handle single tweets.
 // If one doesn't fit, the program will have to bail and reconnect to Twitter.
 // Going intuition is that the average tweet is roughly 4k, and the biggest are 15-ish.
 // Buuutttt... 20 overflowed sometimes.
-const uint32_t json_buffer_length = 25 * 1024;
+static const uint32_t json_buffer_length = 25 * 1024;
 
 static rbuf *json_buffer;
 
