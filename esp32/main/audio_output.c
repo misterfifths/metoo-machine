@@ -38,8 +38,12 @@ static const char *TAG = "AUDIO_OUT";
 
 
 // See note in audio_init below about these weirdnesses.
-static size_t silence_samples_length = 0;
-static unsigned char *silence_samples = NULL;
+#define CONFIG_I2S_DMA_BUF_COUNT 2  // 2 is the minimum
+#define CONFIG_I2S_DMA_BUF_LEN 64
+
+#define _CHANNEL_COUNT (CONFIG_I2S_CHANNEL_FORMAT < I2S_CHANNEL_FMT_ONLY_RIGHT ? 2 : 1)
+#define silence_samples_len (CONFIG_I2S_DMA_BUF_COUNT * CONFIG_I2S_DMA_BUF_LEN * (CONFIG_I2S_BITS_PER_SAMPLE / 8) * _CHANNEL_COUNT)
+static unsigned char silence_samples[silence_samples_len] = { 0 };
 
 
 void audio_init()
@@ -57,8 +61,8 @@ void audio_init()
 		.channel_format = CONFIG_I2S_CHANNEL_FORMAT,
 		.communication_format = I2S_COMM_FORMAT_I2S_MSB,  // despite the audio being technically PCM, this is the format you want, apparently
 		.intr_alloc_flags = 0,
-		.dma_buf_count = 2, // 2 is the minimum
-		.dma_buf_len = 64,  // see note below
+		.dma_buf_count = CONFIG_I2S_DMA_BUF_COUNT,
+		.dma_buf_len = CONFIG_I2S_DMA_BUF_LEN
     };
 
 
@@ -90,14 +94,10 @@ void audio_init()
 	* to i2s after every sound.
 	*/
 
-    const int channel_count = i2s_config.channel_format < I2S_CHANNEL_FMT_ONLY_RIGHT ? 2 : 1;
-    silence_samples_length = i2s_config.dma_buf_count * i2s_config.dma_buf_len * (CONFIG_I2S_BITS_PER_SAMPLE / 8) * channel_count;
-    ESP_LOGI(TAG, "Will be appending %zu bytes of silence to each sound", silence_samples_length);
-
-    silence_samples = malloc(silence_samples_length);
+    ESP_LOGI(TAG, "Will be appending %zu bytes of silence to each sound", silence_samples_len);
 
     size_t template_i = 0;
-    for(size_t i = 0; i < silence_samples_length; i++) {
+    for(size_t i = 0; i < silence_samples_len; i++) {
     	silence_samples[i] = sound_silence_sample[template_i];
 
     	template_i = (template_i + 1) % sound_silence_sample_len;
@@ -108,7 +108,7 @@ void audio_init()
 void play_sound(const unsigned char *samples, size_t samples_length, bool sync)
 {
 	const int mono_divisor = CONFIG_I2S_CHANNEL_COUNT == I2S_CHANNEL_MONO ? 2 : 1;
-	const size_t total_samples_length = samples_length + silence_samples_length;
+	const size_t total_samples_length = samples_length + silence_samples_len;
 	const uint32_t sound_length_ms = ((double)total_samples_length / CONFIG_I2S_SAMPLE_RATE / mono_divisor) * 1000;
 	ESP_LOGD(TAG, "Playing %zu samples, for a length of %u ms", total_samples_length, sound_length_ms);
 
@@ -116,7 +116,7 @@ void play_sound(const unsigned char *samples, size_t samples_length, bool sync)
 	ESP_ERROR_CHECK(i2s_write(CONFIG_I2S_NUM, samples, samples_length, &bytes_written, portMAX_DELAY));
 
 	// See big fat note in audio_init() about the purpose and duration of this silence.
-	ESP_ERROR_CHECK(i2s_write(CONFIG_I2S_NUM, silence_samples, silence_samples_length, &bytes_written, portMAX_DELAY));
+	ESP_ERROR_CHECK(i2s_write(CONFIG_I2S_NUM, silence_samples, silence_samples_len, &bytes_written, portMAX_DELAY));
 
 	if(sync) {
 		vTaskDelay(sound_length_ms / portTICK_PERIOD_MS);
