@@ -59,13 +59,10 @@ static void gpio_isr_handler(void *arg)
 {
 	// TODO: make this only trigger after a certain amount of time/triggers?
 
-	BaseType_t higher_priority_task_woken = pdFALSE;
-	vTaskNotifyGiveFromISR(sleep_task_handle, &higher_priority_task_woken);
-
-	if(higher_priority_task_woken == pdTRUE) {
-		// Docs say that if vTaskNotifyGiveFromISR sets this flag, then there was something
-		// waiting on the semaphore we signaled, and we should schedule a context switch
-		// with this macro (presumably so the task wakes immediately after the ISR returns?):
+	BaseType_t need_context_switch = xTaskResumeFromISR(sleep_task_handle);
+	if(need_context_switch == pdTRUE) {
+		// If the task resume returned true, we need a context switch so we return from the
+		// ISR into the resumed task.
 		portYIELD_FROM_ISR();
 	}
 }
@@ -95,24 +92,22 @@ void sleep_task_main(void *task_params)
 	ESP_ERROR_CHECK(gpio_isr_handler_add(sleep_wake_pin, gpio_isr_handler, NULL));
 
 
-    while(1) {
-    	// If ulTaskNotifyTake returns something other than 1 (i.e., true), it means
-    	// the call timed out and we should wait again.
-    	if(ulTaskNotifyTake(pdTRUE, portMAX_DELAY) != 1) continue;
+	// Go to sleep. We'll be woken by the ISR as needed.
+	vTaskSuspend(NULL);
 
-    	ESP_LOGI(TAG, "Going into deep sleep!");
 
-    	audio_task_empty_queue();
-    	audio_task_enqueue_sound(audio_task_sound_error);
+	ESP_LOGI(TAG, "Going into deep sleep!");
 
-    	// Sleep for the sound to finish.
-    	// TODO: call the audio_output function directly here, rather than going through
-    	// the queue for audio_task?
-    	vTaskDelay(600 / portTICK_PERIOD_MS);
+	audio_task_empty_queue();
+	audio_task_enqueue_sound(audio_task_sound_error);
 
-    	// Sleep to allow the person to move the magnet away and not immediately re-wake.
-    	vTaskDelay(1000 / portTICK_PERIOD_MS);
+	// Sleep for the sound to finish.
+	// TODO: call the audio_output function directly here, rather than going through
+	// the queue for audio_task?
+	vTaskDelay(600 / portTICK_PERIOD_MS);
 
-    	enter_deep_sleep();
-    }
+	// Sleep to allow the person to move the magnet away and not immediately re-wake.
+	vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+	enter_deep_sleep();
 }
