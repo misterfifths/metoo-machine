@@ -46,6 +46,10 @@ static const char *TAG = "AUDIO_OUT";
 static unsigned char silence_samples[silence_samples_len] = { 0 };
 
 
+#define CONFIG_I2S_EVENT_QUEUE_SIZE 8
+static QueueHandle_t i2s_event_queue = NULL;
+
+
 void audio_init()
 {
 	// the i2s module is chatty about DMA buffers
@@ -66,7 +70,7 @@ void audio_init()
     };
 
 
-    ESP_ERROR_CHECK(i2s_driver_install(CONFIG_I2S_NUM, &i2s_config, 0, NULL));
+    ESP_ERROR_CHECK(i2s_driver_install(CONFIG_I2S_NUM, &i2s_config, CONFIG_I2S_EVENT_QUEUE_SIZE, &i2s_event_queue));
 
     // Yet another source of confusion for me re: mono/stereo.
     // I2S_DAC_CHANNEL_BOTH_EN is the only thing that I got working.
@@ -114,12 +118,24 @@ void play_sound(const unsigned char *samples, size_t samples_length, bool sync)
 
 	size_t bytes_written;
 	ESP_ERROR_CHECK(i2s_write(CONFIG_I2S_NUM, samples, samples_length, &bytes_written, portMAX_DELAY));
+	ESP_LOGD(TAG, "Wrote %zu bytes of audio (of %zu total)", bytes_written, samples_length);
 
 	// See big fat note in audio_init() about the purpose and duration of this silence.
 	ESP_ERROR_CHECK(i2s_write(CONFIG_I2S_NUM, silence_samples, silence_samples_len, &bytes_written, portMAX_DELAY));
+	ESP_LOGD(TAG, "Wrote %zu bytes of silence (of %zu total)", bytes_written, silence_samples_len);
 
 	if(sync) {
-		vTaskDelay(sound_length_ms / portTICK_PERIOD_MS);
-		ESP_LOGD(TAG, "Audio done");
+		i2s_event_t event;
+		BaseType_t received_event = xQueueReceive(i2s_event_queue, &event, sound_length_ms / portTICK_PERIOD_MS);
+		if(received_event == pdTRUE) {
+			// The docs are pretty unclear on the I2S event queue, but it seems we get a TX_DONE event
+			// after a write completes (checking the log message, it's down to the ms), so this
+			// seems like a good way to know when a sound completes.
+			// We set the timeout on the queue receive above to be the duration of the sound, so we don't
+			// hang forever in case something gets weird.
+			if(event.type == I2S_EVENT_TX_DONE) ESP_LOGD(TAG, "Audio done; TX event received");
+			else ESP_LOGD(TAG, "Audio done? Received I2S event ID %d", event.type);
+		}
+		else ESP_LOGD(TAG, "Audio done; no I2S event, but duration elapsed");
 	}
 }
