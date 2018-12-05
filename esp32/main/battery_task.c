@@ -1,6 +1,11 @@
 // 2018 / Tim Clem / github.com/misterfifths
 // Public domain.
 
+#include "battery_task.h"
+
+#if !CONFIG_TARGET_PHONE
+
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -9,7 +14,6 @@
 
 #include "driver/adc.h"
 
-#include "battery_task.h"
 #include "audio_task.h"
 
 
@@ -60,3 +64,6 @@ void battery_task_main(void *task_params)
         vTaskDelay(60 * 1000 / portTICK_RATE_MS);
     }
 }
+
+
+#endif

@@ -1,6 +1,11 @@
 // 2018 / Tim Clem / github.com/misterfifths
 // Public domain.
 
+#include "sleep_task.h"
+
+#if !CONFIG_TARGET_PHONE
+
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -10,7 +15,6 @@
 #include "driver/rtc_io.h"
 
 #include "app_wifi.h"
-#include "sleep_task.h"
 #include "audio_task.h"
 
 #include "main.h"
@@ -110,3 +114,6 @@ void sleep_task_main(void *task_params)
 
 	enter_deep_sleep();
 }
+
+
+#endif

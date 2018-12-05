@@ -1,7 +1,9 @@
 // 2018 / Tim Clem / github.com/misterfifths
 // Public domain.
 
-#ifndef _SLEEP_TASK_H
+#include "sdkconfig.h"
+
+#if !CONFIG_TARGET_PHONE && !defined(_SLEEP_TASK_H)
 #define _SLEEP_TASK_H
 
 

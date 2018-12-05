@@ -1,3 +1,7 @@
 menu "App Configuration"
 
+config TARGET_PHONE
+	bool "Configure things for embedding in a gutted phone"
+	default n
+
 endmenu

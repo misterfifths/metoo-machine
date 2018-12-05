@@ -1,6 +1,8 @@
 // 2018 / Tim Clem / github.com/misterfifths
 // Public domain.
 
+#include "sdkconfig.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -17,6 +19,7 @@
 #include "audio_task.h"
 #include "battery_task.h"
 #include "sleep_task.h"
+#include "phone_support.h"
 
 
 static const char *TAG = "APP";
@@ -51,13 +54,19 @@ void app_main()
 
 	app_task_create(&audio_task_descriptor);
 
+	#if CONFIG_TARGET_PHONE
+	app_task_create(&phone_task_descriptor);
+	#else
 	app_task_create(&sleep_task_descriptor);
+	#endif
 
 	init_networking();
 
+	#if !CONFIG_TARGET_PHONE
 	// You're supposed to wait until wifi starts before attempting to read from ADC1, which
 	// is what the battery voltage is on.
 	app_task_create(&battery_task_descriptor);
+	#endif
 
 	twitter_task_handle = app_task_create(&twitter_task_descriptor);
 }
