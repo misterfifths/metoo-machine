@@ -88,6 +88,8 @@ static void init_handset_switch_isr()
 
 	ESP_ERROR_CHECK(gpio_config(&switch_pin_config));
 
+	// TODO: this call will fail if the service is already installed.
+	// Not currently the case, but something to watch out for.
 	ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1));
 	ESP_ERROR_CHECK(gpio_isr_handler_add(handset_switch_pin, handset_switch_isr_handler, NULL));
 }
@@ -99,6 +101,7 @@ void phone_set_handset_led(bool on)
 }
 
 
+// This is rather low-level; probably use phone_set_audio_target.
 static void phone_enable_amp_channels(bool enable_left, bool enable_right)
 {
 	ESP_ERROR_CHECK(gpio_set_level(amp_sdl_pin, enable_left ? 1 : 0));
@@ -128,7 +131,7 @@ static void phone_init()
 	phone_set_handset_led(false);
 
 	init_amp_select_pins();
-	phone_enable_amp_channels(true, false);  // TODO: another place where we assume the phone starts on the hook
+	phone_set_audio_target(phone_audio_target_speaker);  // TODO: another place where we assume the phone starts on the hook
 
 	init_handset_switch_isr();
 }

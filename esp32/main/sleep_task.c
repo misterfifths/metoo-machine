@@ -91,6 +91,8 @@ void sleep_task_main(void *task_params)
 
 	ESP_ERROR_CHECK(gpio_config(&pin_config));
 
+	// TODO: this call will fail if the service is already installed.
+	// Not currently the case, but something to watch out for.
 	ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1));
 	ESP_ERROR_CHECK(gpio_isr_handler_add(sleep_wake_pin, gpio_isr_handler, NULL));
 
