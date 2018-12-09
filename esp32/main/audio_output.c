@@ -139,3 +139,9 @@ void play_sound(const unsigned char *samples, size_t samples_length, bool sync)
 		else ESP_LOGD(TAG, "Audio done; no I2S event, but duration elapsed");
 	}
 }
+
+
+void wait_for_silence()
+{
+	play_sound(sound_silence_sample, sound_silence_sample_len, true);
+}
