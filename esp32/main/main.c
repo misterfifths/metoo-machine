@@ -56,9 +56,11 @@ void app_main()
 
 	#if CONFIG_TARGET_PHONE
 	app_task_create(&phone_task_descriptor);
+	app_task_create(&phone_handset_led_task_descriptor);
 	#else
 	app_task_create(&sleep_task_descriptor);
 	#endif
+
 
 	init_networking();
 
