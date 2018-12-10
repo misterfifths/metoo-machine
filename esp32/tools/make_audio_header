@@ -30,6 +30,9 @@ cat <<EOF | tee -a "$HEADER_FILE" "$C_FILE" > /dev/null
 // These are raw audio samples in $AUDIO_FORMAT format.
 // Sample rate: $SAMPLE_RATE
 
+#include "sdkconfig.h"
+#if !CONFIG_TARGET_PHONE
+
 
 EOF
 
@@ -46,6 +49,19 @@ for f in *.wav; do
 done
 
 
+echo ">> Generating header"
+cat "$C_FILE" | perl -ne '/(const unsigned (char|int) .*) =/ && print "extern $1;\n"' >> "$HEADER_FILE"
+
+
+cat <<EOF | tee -a "$HEADER_FILE" "$C_FILE" > /dev/null
+
+
+#endif
+
+
+EOF
+
+
 # To work around an I2S bug, we need 1 sample of silence in the above format
 echo ">> Generating silence"
 
@@ -56,8 +72,11 @@ echo "// Silence template" >> "$C_FILE"
 xxd -i "$silence_file" | sed 's/^unsigned/const unsigned/' >> "$C_FILE"
 
 
-echo ">> Generating header"
-cat "$C_FILE" | perl -ne '/(const unsigned (char|int) .*) =/ && print "extern $1;\n"' >> "$HEADER_FILE"
+cat <<EOF | tee -a "$HEADER_FILE" > /dev/null
+extern const unsigned char sound_silence_sample[];
+extern const unsigned int sound_silence_sample_len;
+EOF
+
 
 
 echo ">> Cleaning up"
