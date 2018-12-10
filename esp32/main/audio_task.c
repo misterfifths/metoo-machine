@@ -52,8 +52,10 @@ void audio_task_main(void *task_params)
 		uint8_t status_led_flash_count = 0;
 		phone_audio_target audio_target = phone_audio_target_mute;
 
-		const TickType_t handset_audio_start_delay_ms = 200;
+		const TickType_t handset_audio_start_delay_ms = 700;
 		TickType_t sound_start_delay_ms = 0;
+
+		const TickType_t ring_recovery_delay_ms = 400;
 		#endif
 
 		switch(sound_to_play) {
@@ -197,6 +199,12 @@ void audio_task_main(void *task_params)
 		if(sound_samples) {
 			play_sound(sound_samples, sound_samples_len, true);
 		}
+
+		#if CONFIG_TARGET_PHONE
+		if(sound_samples && sound_to_play == audio_task_sound_tweet) {
+			vTaskDelay(ring_recovery_delay_ms / portTICK_PERIOD_MS);
+		}
+		#endif
 	}
 }
 
